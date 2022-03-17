@@ -33,6 +33,10 @@ interface GetStaticPropsResult {
   props: PostProps;
 }
 
+interface IntrinsicAttributes {
+  props: Post;
+}
+
 const mockedQueryReturn = {
   results: [
     {
