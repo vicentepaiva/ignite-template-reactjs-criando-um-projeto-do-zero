@@ -1,13 +1,11 @@
+import { useState } from 'react';
 import { GetStaticProps } from 'next';
-import Head from 'next/head';
-import Link from 'next/link';
-
 import Prismic from '@prismicio/client';
-
+import Head from 'next/head';
+import { FaRegCalendarAlt, FaUserAlt } from 'react-icons/fa';
+import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useEffect, useState } from 'react';
-import { FiCalendar, FiUser } from 'react-icons/fi';
 import { getPrismicClient } from '../services/prismic';
 
 import commonStyles from '../styles/common.module.scss';
@@ -30,95 +28,83 @@ interface PostPagination {
 
 interface HomeProps {
   postsPagination: PostPagination;
-  preview: boolean;
 }
 
-export default function Home({
-  postsPagination,
-  preview,
-}: HomeProps): JSX.Element {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [nextPage, setNextPage] = useState('');
+export default function Home({ postsPagination }: HomeProps): JSX.Element {
+  const postsFormated = postsPagination.results.map(post => {
+    return {
+      ...post,
+      first_publication_date: format(
+        new Date(post.first_publication_date),
+        'dd MMM yyyy',
+        {
+          locale: ptBR,
+        }
+      ),
+    };
+  });
 
-  useEffect(() => {
-    setPosts(
-      postsPagination.results.map((post: Post) => {
+  const [posts, setPosts] = useState(postsFormated);
+  const [nextPage, setNextPage] = useState(postsPagination.next_page);
+
+  const handleNextPage = async (): Promise<void> => {
+    const postsResults = await fetch(`${nextPage}`).then(response =>
+      response.json()
+    );
+    setNextPage(postsResults.next_page);
+    setPosts([
+      ...posts,
+      ...postsResults.results.map(post => {
         return {
           ...post,
           first_publication_date: format(
             new Date(post.first_publication_date),
             'dd MMM yyyy',
-            { locale: ptBR }
+            {
+              locale: ptBR,
+            }
           ),
         };
-      })
-    );
-    setNextPage(postsPagination.next_page);
-  }, [postsPagination.results, postsPagination.next_page]);
-
-  function handlePagination(): void {
-    fetch(
-      `${nextPage}&access_token=${process.env.NEXT_PUBLIC_PRISMIC_ACCESS_TOKEN}`
-    )
-      .then(res => res.json())
-      .then(data => {
-        const formattedData = data.results.map(post => {
-          return {
-            uid: post.uid,
-            first_publication_date: format(
-              new Date(post.first_publication_date),
-              'dd MMM yyyy',
-              { locale: ptBR }
-            ),
-            data: {
-              title: post.data.title,
-              subtitle: post.data.subtitle,
-              author: post.data.author,
-            },
-          };
-        });
-
-        setPosts([...posts, ...formattedData]);
-        setNextPage(data.next_page);
-      });
-  }
+      }),
+    ]);
+  };
 
   return (
     <>
       <Head>
-        <title>Home | SpaceTraveling Blog</title>
+        <title>Desafio | Charter III</title>
       </Head>
-
-      <main className={`${commonStyles.container}`}>
-        <section className={styles.post}>
-          {posts &&
-            posts.map(post => (
-              <Link key={post.uid} href={`/post/${post.uid}`}>
+      <main className={commonStyles.contentContainer}>
+        <ul>
+          {posts.map(post => (
+            <li key={post.uid}>
+              <Link href={`/post/${post.uid}`}>
                 <a>
-                  <h1>{post.data.title}</h1>
-                  <p>{post.data.subtitle}</p>
+                  <section className={commonStyles.postContainer}>
+                    <h1>{post.data.title}</h1>
+                    <p>{post.data.subtitle}</p>
+                    <section>
+                      <div>
+                        <FaRegCalendarAlt />
+                        <time>{post.first_publication_date}</time>
+                      </div>
 
-                  <div>
-                    <span>
-                      <FiCalendar size={20} color="#BBBBBB" />
-                      {post.first_publication_date}
-                    </span>
-
-                    <span>
-                      <FiUser size={20} color="#BBBBBB" />
-                      {post.data.author}
-                    </span>
-                  </div>
+                      <div>
+                        <FaUserAlt /> {post.data.author}
+                      </div>
+                    </section>
+                  </section>
                 </a>
               </Link>
-            ))}
-        </section>
+            </li>
+          ))}
+        </ul>
 
         {nextPage && (
           <button
-            className={styles.moreposts}
+            className={styles.button}
             type="button"
-            onClick={handlePagination}
+            onClick={handleNextPage}
           >
             Carregar mais posts
           </button>
@@ -128,18 +114,13 @@ export default function Home({
   );
 }
 
-export const getStaticProps: GetStaticProps = async ({
-  preview = false,
-  previewData,
-}) => {
+export const getStaticProps: GetStaticProps = async () => {
   const prismic = getPrismicClient();
 
   const postsResponse = await prismic.query(
-    [Prismic.predicates.at('document.type', 'post')],
+    [Prismic.Predicates.at('document.type', 'post')],
     {
-      fetch: ['post.title', 'post.subtitle', 'post.author'],
-      pageSize: 2,
-      ref: previewData?.ref ?? null,
+      pageSize: 1,
     }
   );
 
@@ -155,14 +136,16 @@ export const getStaticProps: GetStaticProps = async ({
     };
   });
 
+  const postsPagination = {
+    next_page: postsResponse.next_page,
+    results: posts,
+  };
+
   return {
     props: {
-      postsPagination: {
-        results: posts,
-        next_page: postsResponse.next_page,
-      },
-      preview,
+      postsPagination,
     },
+    revalidate: 1800,
   };
 };
 

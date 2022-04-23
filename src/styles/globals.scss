@@ -1,3 +1,4 @@
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -5,32 +6,31 @@
 }
 
 :root {
-  --gray-100: #F8F8F8;
-  --gray-200: #D7D7D7;
-  --gray-300: #BBBBBB;
-  --gray-800: #1A1D23;
-
-  --pink-300: #FF57B2;
+  --highlight: #FF57B2;
+  --heading: ##F8F8F8;
+  --background: #1A1D23;
+  --info: #BBBBBB;
+  --body: #D7D7D7;
 }
 
-@media (max-width: 1080px) {
+@media(max-width: 1080px) {
   html {
-    font-size: 93.75%;
+      font-size: 93.75%;
   }
 }
 
-@media (max-width: 720px) {
+@media(max-width: 1080px) {
   html {
-    font-size: 87.5%;
+      font-size: 87.5%;
   }
 }
 
 body {
-  background-color: var(--gray-800);
-  color: var(--gray-100);
+  background: var(--background);
+  color: var(--body);
 }
 
-body, input, text, select, button {
+body, input, textarea select button {
   font: 400 1rem "Inter", sans-serif;
 }
 
